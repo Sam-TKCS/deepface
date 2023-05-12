@@ -12,7 +12,6 @@ import pandas as pd
 from tqdm import tqdm
 import cv2
 import tensorflow as tf
-from deprecated import deprecated
 
 # package dependencies
 from deepface.basemodels import (
@@ -119,10 +118,6 @@ def verify(
 
             detector_backend (string): set face detector backend to opencv, retinaface, mtcnn, ssd,
             dlib or mediapipe
-            
-            align (boolean): alignment according to the eye positions.
-            
-            normalization (string): normalize the input image before feeding to model
 
     Returns:
             Verify function returns a dictionary.
@@ -168,6 +163,7 @@ def verify(
     # --------------------------------
     distances = []
     regions = []
+    distance_map = []
     # now we will find the face pair with minimum distance
     for img1_content, img1_region, _ in img1_objs:
         for img2_content, img2_region, _ in img2_objs:
@@ -194,6 +190,7 @@ def verify(
 
             if distance_metric == "cosine":
                 distance = dst.findCosineDistance(img1_representation, img2_representation)
+                distance_map.append({"img1":img1_region,"img2":img2_region,"distance":distance})
             elif distance_metric == "euclidean":
                 distance = dst.findEuclideanDistance(img1_representation, img2_representation)
             elif distance_metric == "euclidean_l2":
@@ -222,8 +219,9 @@ def verify(
         "similarity_metric": distance_metric,
         "facial_areas": {"img1": facial_areas[0], "img2": facial_areas[1]},
         "time": round(toc - tic, 2),
+        "distance_map": distance_map
     }
-
+    print("running_current")
     return resp_obj
 
 
@@ -255,8 +253,6 @@ def analyze(
 
             detector_backend (string): set face detector backend to opencv, retinaface, mtcnn, ssd,
             dlib or mediapipe.
-            
-            align (boolean): alignment according to the eye positions.
 
             silent (boolean): disable (some) log messages
 
@@ -422,10 +418,6 @@ def find(
 
             detector_backend (string): set face detector backend to opencv, retinaface, mtcnn, ssd,
             dlib or mediapipe
-            
-            align (boolean): alignment according to the eye positions.
-            
-            normalization (string): normalize the input image before feeding to model
 
             silent (boolean): disable some logging and progress bars
 
@@ -679,7 +671,7 @@ def represent(
         img_objs = [(img, img_region, 0)]
     # ---------------------------------
 
-    for img, region, confidence in img_objs:
+    for img, region, _ in img_objs:
         # custom normalization
         img = functions.normalize_input(img=img, normalization=normalization)
 
@@ -694,7 +686,6 @@ def represent(
         resp_obj = {}
         resp_obj["embedding"] = embedding
         resp_obj["facial_area"] = region
-        resp_obj["face_confidence"] = confidence
         resp_objs.append(resp_obj)
 
     return resp_objs
@@ -824,40 +815,11 @@ def extract_faces(
 # deprecated functions
 
 
-@deprecated(version="0.0.78", reason="Use DeepFace.extract_faces instead of DeepFace.detectFace")
 def detectFace(
     img_path, target_size=(224, 224), detector_backend="opencv", enforce_detection=True, align=True
 ):
-    """
-    Deprecated function. Use extract_faces for same functionality.
-    
-    This function applies pre-processing stages of a face recognition pipeline
-    including detection and alignment
+    print("⚠️ Function detectFace is deprecated! Use extract_faces instead of this.")
 
-    Parameters:
-            img_path: exact image path, numpy array (BGR) or base64 encoded image.
-            Source image can have many face. Then, result will be the size of number
-            of faces appearing in that source image.
-
-            target_size (tuple): final shape of facial image. black pixels will be
-            added to resize the image.
-
-            detector_backend (string): face detection backends are retinaface, mtcnn,
-            opencv, ssd or dlib
-
-            enforce_detection (boolean): function throws exception if face cannot be
-            detected in the fed image. Set this to False if you do not want to get
-            an exception and run the function anyway.
-
-            align (boolean): alignment according to the eye positions.
-
-            grayscale (boolean): extracting faces in rgb or gray scale
-
-    Returns:
-            detected and aligned face as numpy array
-            
-    """
-    print("⚠️ Function detectFace is deprecated. Use extract_faces instead.")
     face_objs = extract_faces(
         img_path=img_path,
         target_size=target_size,
